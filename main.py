@@ -125,7 +125,7 @@ class Slots(BaseWidget):
             self.set_background_uv('tx_stripbig3', 1.2 * nap)
             #print(self.sw_seconds)
             if self.sw_seconds > self.first_stop_length+2+random.uniform(0,0.8):  # snap to next "unit"
-                self.state='idle'
+                self.state='FINAL'
                 print('before round',self.tx_stripbig3.uvpos[1]*6%6)
                 slotnum = round(self.tx_stripbig3.uvpos[1]*6%6)
                 slotnum=slotnum+1
@@ -135,6 +135,9 @@ class Slots(BaseWidget):
                    self.jackpot=self.jackpot+1
                 print( 'pos:',slotnum)
                 print('look for result')
+        elif self.state =='FINAL':
+                print('total jackpot:',self.jackpot)
+                self.state='idle'
 
 class Slot(App):
     playing = False
