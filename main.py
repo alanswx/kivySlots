@@ -12,7 +12,9 @@ from kivy.properties import (AliasProperty,
                              ObjectProperty)
 from kivy.uix.image import Image as ImageWidget
 from kivy.uix.widget import Widget
+from kivy.graphics import *
 from kivy.utils import get_color_from_hex
+from kivy.config import Config
 
 class MultiAudio:
     _next = 0
@@ -27,55 +29,52 @@ class MultiAudio:
 
 snd_bump = SoundLoader.load('audio/roll.ogg')
 
-class BaseWidget(Widget):
-    def load_tileable(self, name):
-        print("loading:",name)
-        t = Image('img/%s.png' % name).texture
-        print("loading:",t)
-        t.wrap = 'repeat'
-        setattr(self, 'tx_%s' % name, t)
+class Strip(Rectangle):
+  def __init__(self, name, **kwargs):
+    super(Strip, self).__init__(**kwargs)
 
-class Slots(BaseWidget):
-    tx_stripbig1= ObjectProperty(None)
-    tx_stripbig2= ObjectProperty(None)
-    tx_stripbig3= ObjectProperty(None)
+    img = Image('img/%s.png' % name) 
+    self.texture = img.texture
+    self.texture.wrap = 'repeat'
+    
+  def set_background_uv(self, canvas, val):
+    u = 0
+    v = (self.tex_coords[1] - val ) % canvas.height
+    w = 1
+    h = -.8
+    self.tex_coords = [u, v, u+w, v, u+w, v+h, u, v+h]
+
+  def strip_pos(self):
+    return round(self.tex_coords[1]*6) % 6
+  
+
+class Slots(Widget):
     sw_seconds=0
     state = 'idle'
     first_stop_length=2.0
     jackpot=0
 
-    #def on_start(self):
-    #    Clock.schedule_interval(self.update,0)
-    def set_background_size(self, t):
-        #t.uvsize = (self.width / t.width, -1)
-        t.uvsize = (-1, self.height/t.height)
-        t.flip_vertical()
-
-    def set_background_uv(self, name, val):
-        t = getattr(self, name)
-        #t.uvpos = ((t.uvpos[0] + val) % self.width, t.uvpos[1])
-        #print("set uv",val)
-        t.uvpos = (t.uvpos[0] , ((t.uvpos[1] + val ) % self.height))
-        #print('uvpos:',t.uvpos)
-        self.property(name).dispatch(self)
-
     def __init__(self, **kwargs):
         super(Slots, self).__init__(**kwargs)
 
-        for name in 'stripbig1 stripbig2 stripbig3'.split():
-            self.load_tileable(name)
-
-        #self.set_background_uv('tx_stripbig1', random.uniform(1,5))
-        #self.set_background_uv('tx_stripbig2', random.uniform(1,5))
-        #self.set_background_uv('tx_stripbig3', random.uniform(1,5))
-        print("set uv")
-        self.set_background_uv('tx_stripbig1', 0)
-        self.set_background_uv('tx_stripbig2', 1/6)
-        self.set_background_uv('tx_stripbig3', 2/6)
+        self.strips = []
+        with self.canvas:
+          for n in range(3):
+            strip = Strip("stripbig%d" % (n+1))
+            strip.set_background_uv(self, .1+n)
+            self.strips.append(strip)
 
     def on_size(self, *args):
-        for t in (self.tx_stripbig1,self.tx_stripbig2,self.tx_stripbig3):
-            self.set_background_size(t)
+      cx = self.size[0]/2
+      ns = len(self.strips)
+      sw = self.size[0] / (ns*2)
+      mw = 10
+
+      sx = cx - (ns*sw+(ns-1)*mw)/2
+
+      for n, strip in enumerate(self.strips):
+        strip.pos = (sx + n*sw + (n-1)*mw, 0)
+        strip.size = (sw, self.size[1])
 
     def start_spin(self):
         if self.state=='idle':
@@ -90,46 +89,46 @@ class Slots(BaseWidget):
             #
         elif self.state =='STATE_SPINNING':
             self.sw_seconds += nap
-            self.set_background_uv('tx_stripbig1', 1 * nap)
-            self.set_background_uv('tx_stripbig2', 1.1 * nap)
-            self.set_background_uv('tx_stripbig3', 1.2 * nap)
+            
+            for n, strip in enumerate(self.strips):
+              strip.set_background_uv(self, (1+((n+1)*.2))*nap)
+
             # check time then switch to next state
             #print(self.sw_seconds)
             if self.sw_seconds > self.first_stop_length+random.uniform(0,0.8):  # snap to next "unit"
                 self.state='STATE_SLOT1_STOP'
-                print('before round',self.tx_stripbig2.uvpos[1]*6%6)
-                slotnum = round(self.tx_stripbig1.uvpos[1]*6%6)
-                self.set_background_uv('tx_stripbig1', slotnum/6)
+                slotnum = round(self.strips[0].strip_pos())
+                self.strips[0].set_background_uv(self, slotnum/6)
                 slotnum=slotnum+1
                 if slotnum==4:
                    print('winner')
                    self.jackpot=self.jackpot+1
                 print( 'pos:',slotnum)
+
         elif self.state =='STATE_SLOT1_STOP':
             self.sw_seconds += nap
-            self.set_background_uv('tx_stripbig2', 1.1 * nap)
-            self.set_background_uv('tx_stripbig3', 1.2 * nap)
+            self.strips[1].set_background_uv(self, 1.1 * nap)
+            self.strips[2].set_background_uv(self, 1.2 * nap)
+
             #print(self.sw_seconds)
             if self.sw_seconds > self.first_stop_length+1+random.uniform(0,0.8):  # snap to next "unit"
                 self.state='STATE_SLOT2_STOP'
-                print('before round',self.tx_stripbig2.uvpos[1]*6%6)
-                slotnum = round(self.tx_stripbig2.uvpos[1]*6%6)
+                slotnum = round(self.strips[1].strip_pos())
                 slotnum=slotnum+1
-                self.set_background_uv('tx_stripbig2', slotnum/6)
+                self.strips[1].set_background_uv(self, slotnum/6)
                 if slotnum==4:
                    print('winner')
                    self.jackpot=self.jackpot+1
                 print( 'pos:',slotnum)
         elif self.state =='STATE_SLOT2_STOP':
             self.sw_seconds += nap
-            self.set_background_uv('tx_stripbig3', 1.2 * nap)
+            self.strips[2].set_background_uv(self, 1.2 * nap)
             #print(self.sw_seconds)
             if self.sw_seconds > self.first_stop_length+2+random.uniform(0,0.8):  # snap to next "unit"
                 self.state='FINAL'
-                print('before round',self.tx_stripbig3.uvpos[1]*6%6)
-                slotnum = round(self.tx_stripbig3.uvpos[1]*6%6)
+                slotnum = round(self.strips[2].strip_pos())
                 slotnum=slotnum+1
-                self.set_background_uv('tx_stripbig3', slotnum/6)
+                self.strips[2].set_background_uv(self, slotnum/6)
                 if slotnum==4:
                    print('winner')
                    self.jackpot=self.jackpot+1
@@ -147,7 +146,7 @@ class Slot(App):
 
         self.slots = self.root.ids.slots
         #self.bird = self.root.ids.bird
-        Clock.schedule_interval(self.update, 0.016)
+        Clock.schedule_interval(self.update, 0.004)
 
         Window.bind(on_key_down=self.on_key_down)
         self.slots.on_touch_down = self.user_action
@@ -168,7 +167,15 @@ class Slot(App):
     def user_action(self, *args):
         self.slots.start_spin()
 
+def start():
+  #Config.set('graphics', 'fullscreen', '1')
+  #Config.set('graphics', 'show_cursor', '0')
+  Window.size = (1920, 1200)
+
+  Window.clearcolor = get_color_from_hex('00bfff')
+  
+  Slot().run()
+  
 
 if __name__ == '__main__':
-    Window.clearcolor = get_color_from_hex('00bfff')
-    Slot().run()
+  start()
