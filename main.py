@@ -32,16 +32,24 @@ snd_bump = SoundLoader.load('audio/roll.ogg')
 class Strip(Rectangle):
   def __init__(self, name, **kwargs):
     super(Strip, self).__init__(**kwargs)
+    self.name = name
 
     img = Image('img/%s.png' % name) 
     self.texture = img.texture
     self.texture.wrap = 'repeat'
     
+  def add_background_uv(self, canvas, val):
+    u = 0
+    v = (self.tex_coords[1] - val)
+    w = 1
+    h = -.7
+    self.tex_coords = [u, v, u+w, v, u+w, v+h, u, v+h]
+
   def set_background_uv(self, canvas, val):
     u = 0
-    v = (self.tex_coords[1] - val ) % canvas.height
+    v = (val+.1)
     w = 1
-    h = -.8
+    h = -.7
     self.tex_coords = [u, v, u+w, v, u+w, v+h, u, v+h]
 
   def strip_pos(self):
@@ -59,10 +67,13 @@ class Slots(Widget):
 
         self.strips = []
         with self.canvas:
+
           for n in range(3):
             strip = Strip("stripbig%d" % (n+1))
-            strip.set_background_uv(self, .1+n)
+            strip.set_background_uv(self, 0)
             self.strips.append(strip)
+          Color(1,0,0)
+          self.payline = Rectangle()
 
     def on_size(self, *args):
       cx = self.size[0]/2
@@ -76,9 +87,13 @@ class Slots(Widget):
         strip.pos = (sx + n*sw + (n-1)*mw, 0)
         strip.size = (sw, self.size[1])
 
+      self.payline.pos = (50, self.size[1]/2)
+      self.payline.size = (self.size[0]-100, 10)
+
     def start_spin(self):
         if self.state=='idle':
             self.state ='STATE_SPINNING'
+            self.stopped = 0
             snd_bump.play()
             self.sw_seconds=0
             self.jackpot=0
@@ -89,54 +104,26 @@ class Slots(Widget):
             #
         elif self.state =='STATE_SPINNING':
             self.sw_seconds += nap
-            
-            for n, strip in enumerate(self.strips):
-              strip.set_background_uv(self, (1+((n+1)*.2))*nap)
+
+            for n in range(self.stopped, len(self.strips)):
+              v = 1.0 + (n*.1)
+              self.strips[n].add_background_uv(self, v * nap)
 
             # check time then switch to next state
             #print(self.sw_seconds)
-            if self.sw_seconds > self.first_stop_length+random.uniform(0,0.8):  # snap to next "unit"
-                self.state='STATE_SLOT1_STOP'
-                slotnum = round(self.strips[0].strip_pos())
-                self.strips[0].set_background_uv(self, slotnum/6)
-                slotnum=slotnum+1
-                if slotnum==4:
-                   print('winner')
-                   self.jackpot=self.jackpot+1
-                print( 'pos:',slotnum)
-
-        elif self.state =='STATE_SLOT1_STOP':
-            self.sw_seconds += nap
-            self.strips[1].set_background_uv(self, 1.1 * nap)
-            self.strips[2].set_background_uv(self, 1.2 * nap)
-
-            #print(self.sw_seconds)
-            if self.sw_seconds > self.first_stop_length+1+random.uniform(0,0.8):  # snap to next "unit"
-                self.state='STATE_SLOT2_STOP'
-                slotnum = round(self.strips[1].strip_pos())
-                slotnum=slotnum+1
-                self.strips[1].set_background_uv(self, slotnum/6)
-                if slotnum==4:
-                   print('winner')
-                   self.jackpot=self.jackpot+1
-                print( 'pos:',slotnum)
-        elif self.state =='STATE_SLOT2_STOP':
-            self.sw_seconds += nap
-            self.strips[2].set_background_uv(self, 1.2 * nap)
-            #print(self.sw_seconds)
-            if self.sw_seconds > self.first_stop_length+2+random.uniform(0,0.8):  # snap to next "unit"
-                self.state='FINAL'
-                slotnum = round(self.strips[2].strip_pos())
-                slotnum=slotnum+1
-                self.strips[2].set_background_uv(self, slotnum/6)
-                if slotnum==4:
-                   print('winner')
-                   self.jackpot=self.jackpot+1
-                print( 'pos:',slotnum)
-                print('look for result')
+            if self.sw_seconds > self.first_stop_length+self.stopped +random.uniform(0,0.8):  # snap to next "unit"
+              slotnum = round(self.strips[self.stopped].strip_pos())
+              slotnum=slotnum+1
+              self.strips[self.stopped].set_background_uv(self, slotnum/6)
+              if slotnum==2:
+                 print('winner on %d' % (self.stopped+1))
+                 self.jackpot=self.jackpot+1
+              self.stopped += 1
+              if self.stopped >= len(self.strips):
+                self.state = "FINAL"
         elif self.state =='FINAL':
-                print('total jackpot:',self.jackpot)
-                self.state='idle'
+          print('total jackpot:',self.jackpot)
+          self.state='idle'
 
 class Slot(App):
     playing = False
