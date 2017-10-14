@@ -16,6 +16,16 @@ from kivy.graphics import *
 from kivy.utils import get_color_from_hex
 from kivy.config import Config
 
+try:
+  import piHardware as Hardware
+except ImportError:
+  import nullHardware as Hardware
+
+
+# should this be global?
+coinDispense = Hardware.coinDispense()
+
+
 class MultiAudio:
     _next = 0
 
@@ -130,10 +140,12 @@ class Slots(Widget):
 
       elif self.state =='FINAL':
         print('total jackpot:',self.jackpot)
+        coinDispense.dispenseCoin(self.jackpot+1)
         self.state='idle'
 
 class Slot(App):
     playing = False
+    hardwareButton = Hardware.hardwareButton()
 
     def on_start(self):
         self.spacing = 0.5 * self.root.width
@@ -146,6 +158,9 @@ class Slot(App):
         self.slots.on_touch_down = self.user_action
 
     def update(self, nap):
+        if self.hardwareButton.checkButton():
+            self.user_action()
+
         self.slots.update(nap)
         if not self.playing:
             return  # don't move bird or pipes
@@ -164,7 +179,8 @@ class Slot(App):
 def start():
   #Config.set('graphics', 'fullscreen', '1')
   #Config.set('graphics', 'show_cursor', '0')
-  Window.size = (1920, 1200)
+  if Hardware.config.window_size:
+    Window.size = Hardware.config.window_size
 
   Window.clearcolor = get_color_from_hex('00bfff')
   
