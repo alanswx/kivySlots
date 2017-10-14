@@ -8,22 +8,23 @@ class config:
    window_size=(1920, 1200)
 
 class coinDispense:
+
      def __init__(self):
-        pwm = Adafruit_PCA9685.PCA9685()
+        self.pwm = Adafruit_PCA9685.PCA9685()
         # Configure min and max servo pulse lengths
-        servo_min = 370  # Min pulse length out of 4096
-        servo_max = 575  # Max pulse length out of 4096
+        self.servo_min = 370  # Min pulse length out of 4096
+        self.servo_max = 575  # Max pulse length out of 4096
         # Set frequency to 60hz, good for servos.
-        pwm.set_pwm_freq(60)
+        self.pwm.set_pwm_freq(60)
 
 
      def dispenseCoin(self,number):
          print("dispense coin:"+str(number))
          for i in range(number):
            print("dispense one coin")
-           pwm.set_pwm(0, 0, servo_max)
+           self.pwm.set_pwm(0, 0, self.servo_max)
            time.sleep(1)
-           pwm.set_pwm(0, 0, servo_min)
+           self.pwm.set_pwm(0, 0, self.servo_min)
            time.sleep(1)
 
 
