@@ -185,10 +185,10 @@ class Slot(App):
         self.slots.start_spin()
 
 def start():
-  #Config.set('graphics', 'fullscreen', '1')
   #Config.set('graphics', 'show_cursor', '0')
   if Hardware.config.window_size:
-    Window.size = Hardware.config.window_size
+    Config.set('graphics', 'fullscreen', '1')
+    #Window.size = Hardware.config.window_size
 
   Window.clearcolor = get_color_from_hex('00bfff')
   
