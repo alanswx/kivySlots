@@ -37,7 +37,12 @@ class MultiAudio:
         self.buf[self._next].play()
         self._next = (self._next + 1) % len(self.buf)
 
+snd_win= SoundLoader.load('audio/win.ogg')
 snd_bump = SoundLoader.load('audio/roll.ogg')
+reel_sound=[]
+for i in range(1,7):
+  print(i)
+  reel_sound.append(SoundLoader.load('audio/reels/reel-icon-'+str(i)+'.ogg'))
 
 class Strip(Rectangle):
   def __init__(self, name, **kwargs):
@@ -131,6 +136,8 @@ class Slots(Widget):
         if self.sw_seconds > self.first_stop_length+self.stopped +random.uniform(0,0.8):  # snap to next "unit"
           slotnum = self.strips[self.stopped].strip_pos()
           self.strips[self.stopped].set_uv(self, self.strips[self.stopped].slot_to_uv(slotnum))
+          # play sound for slot
+          reel_sound[slotnum].play()
           if slotnum==5:
              print('winner on {}'.format(self.stopped+1))
              self.jackpot=self.jackpot+1
@@ -140,6 +147,7 @@ class Slots(Widget):
 
       elif self.state =='FINAL':
         print('total jackpot:',self.jackpot)
+        if (self.jackpot>0): snd_win.play()
         coinDispense.dispenseCoin(self.jackpot+1)
         self.state='idle'
 
