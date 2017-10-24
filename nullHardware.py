@@ -1,5 +1,5 @@
 import time
-
+import logging
 
 
 class config:
@@ -14,11 +14,9 @@ class coinDispense:
 
 
      def dispenseCoin(self,number):
-            print("dispense coin:"+str(number))
+            logging.warn("dispense coin:"+str(number))
             for i in range(number):
-              print("dispense one coin")
-              time.sleep(1)
-              time.sleep(1)
+              logging.warn("dispense one coin")
 
 
 

@@ -1,4 +1,5 @@
 import os
+import logging
 #
 # without this - sound was really delayed, not sure why
 #
@@ -24,11 +25,10 @@ class coinDispense:
         # Set frequency to 60hz, good for servos.
         self.pwm.set_pwm_freq(60)
 
-
      def dispenseCoin(self,number):
-         print("dispense coin:"+str(number))
+         logging.info("dispense coin: {}".format(number))
          for i in range(number):
-           print("dispense one coin")
+           logging.info("dispense one coin")
            self.pwm.set_pwm(0, 0, self.servo_max)
            time.sleep(1)
            self.pwm.set_pwm(0, 0, self.servo_min)
@@ -40,10 +40,18 @@ class hardwareButton:
      def __init__(self):
        GPIO.setmode(GPIO.BCM)
        GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+       self.debounce = False
+
      def checkButton(self):
         input_state = GPIO.input(18)
+        if self.debounce == True:
+          if input_state == True:
+            self.debounce = False
+          return False
+
         if input_state == False:
-            print('Button Pressed')
-            time.sleep(0.2)
+            logging.warn('Button Pressed')
+            self.debounce = True
             return True
         return False

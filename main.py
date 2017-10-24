@@ -2,7 +2,7 @@
 from __future__ import division
 
 import random
-import os, sys, time, math
+import os, sys, time, math, logging, argparse
 
 try:
   import piHardware as Hardware
@@ -45,7 +45,6 @@ snd_win= SoundLoader.load('audio/win'+Hardware.config.audio_extension)
 snd_bump = SoundLoader.load('audio/roll'+Hardware.config.audio_extension)
 reel_sound=[]
 for i in range(1,7):
-  print(i)
   reel_sound.append(SoundLoader.load('audio/reels/reel-icon-'+str(i)+Hardware.config.audio_extension))
 
 class Strip(Rectangle):
@@ -149,14 +148,14 @@ class Slots(Widget):
           # play sound for slot
           reel_sound[slotnum].play()
           if slotnum==5:
-             print('winner on {}'.format(self.stopped+1))
+             logging.warn('winner on {}'.format(self.stopped+1))
              self.jackpot=self.jackpot+1
           self.stopped += 1
           if self.stopped >= len(self.strips):
             self.state = "FINAL"
 
       elif self.state =='FINAL':
-        print('total jackpot:',self.jackpot)
+        logging.warn('total jackpot: {}'.format(self.jackpot))
         if (self.jackpot>0): snd_win.play()
         coinDispense.dispenseCoin(self.jackpot+1)
         self.state='idle'
@@ -194,7 +193,38 @@ class Slot(App):
     def user_action(self, *args):
         self.slots.start_spin()
 
-def start():
+def parse_args(argv):
+  parser = argparse.ArgumentParser(
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    description=__doc__)
+
+  parser.add_argument("-t", "--test", dest="test_flag", 
+                    default=False,
+                    action="store_true",
+                    help="Run test function")
+  parser.add_argument("--log-level", type=str,
+                      choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                      help="Desired console log level")
+  parser.add_argument("-d", "--debug", dest="log_level", action="store_const",
+                      const="DEBUG",
+                      help="Activate debugging")
+  parser.add_argument("-q", "--quiet", dest="log_level", action="store_const",
+                      const="CRITICAL",
+                      help="Quite mode")
+
+  args = parser.parse_args(argv[1:])
+
+  return parser, args
+
+
+def main(argv, stdout, environ):
+  if sys.version_info < (3, 0): reload(sys); sys.setdefaultencoding('utf8')
+
+  parser, args = parse_args(argv)
+
+  logging.basicConfig(format="[%(asctime)s] %(levelname)-8s %(message)s", 
+                    datefmt="%m/%d %H:%M:%S", level=args.log_level)
+
   #Config.set('graphics', 'show_cursor', '0')
   if Hardware.config.window_size:
     Config.set('graphics', 'fullscreen', '1')
@@ -206,4 +236,4 @@ def start():
   
 
 if __name__ == '__main__':
-  start()
+  main(sys.argv, sys.stdout, os.environ)
