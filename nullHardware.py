@@ -1,8 +1,11 @@
 import time
 
+
+
 class config:
    window_size=(960, 600)
    window_size=None
+   audio_extension='.ogg'
 
 class coinDispense:
      def __init__(self):

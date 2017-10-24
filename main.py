@@ -1,6 +1,12 @@
 from __future__ import division
 import random
 
+try:
+  import piHardware as Hardware
+except ImportError:
+  import nullHardware as Hardware
+
+
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.audio import SoundLoader
@@ -15,11 +21,6 @@ from kivy.uix.widget import Widget
 from kivy.graphics import *
 from kivy.utils import get_color_from_hex
 from kivy.config import Config
-
-try:
-  import piHardware as Hardware
-except ImportError:
-  import nullHardware as Hardware
 
 
 # should this be global?
@@ -37,12 +38,12 @@ class MultiAudio:
         self.buf[self._next].play()
         self._next = (self._next + 1) % len(self.buf)
 
-snd_win= SoundLoader.load('audio/win.ogg')
-snd_bump = SoundLoader.load('audio/roll.ogg')
+snd_win= SoundLoader.load('audio/win'+Hardware.config.audio_extension)
+snd_bump = SoundLoader.load('audio/roll'+Hardware.config.audio_extension)
 reel_sound=[]
 for i in range(1,7):
   print(i)
-  reel_sound.append(SoundLoader.load('audio/reels/reel-icon-'+str(i)+'.ogg'))
+  reel_sound.append(SoundLoader.load('audio/reels/reel-icon-'+str(i)+Hardware.config.audio_extension))
 
 class Strip(Rectangle):
   def __init__(self, name, **kwargs):

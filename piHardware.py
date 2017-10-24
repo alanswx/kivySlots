@@ -1,3 +1,9 @@
+import os
+#
+# without this - sound was really delayed, not sure why
+#
+os.environ['KIVY_AUDIO'] = 'sdl2'
+
 import RPi.GPIO as GPIO
 import time
 
@@ -6,6 +12,7 @@ import Adafruit_PCA9685
 
 class config:
    window_size=(1920, 1200)
+   audio_extension='.ogg'
 
 class coinDispense:
 
