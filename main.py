@@ -2,7 +2,9 @@
 from __future__ import division
 
 import random
-import os, sys, time, math, logging, argparse
+import os, sys, time, math, logging, argparse, glob
+
+import config
 
 try:
   import piHardware as Hardware
@@ -41,18 +43,11 @@ class MultiAudio:
         self.buf[self._next].play()
         self._next = (self._next + 1) % len(self.buf)
 
-snd_win= SoundLoader.load('audio/win'+Hardware.config.audio_extension)
-snd_bump = SoundLoader.load('audio/roll'+Hardware.config.audio_extension)
-reel_sound=[]
-for i in range(1,7):
-  reel_sound.append(SoundLoader.load('audio/reels/reel-icon-'+str(i)+Hardware.config.audio_extension))
 
 class Strip(Rectangle):
-  def __init__(self, name, **kwargs):
+  def __init__(self, img, **kwargs):
     super(Strip, self).__init__(**kwargs)
-    self.name = name
 
-    img = Image('img/%s.png' % name) 
     self.texture = img.texture
     self.texture.wrap = 'repeat'
     
@@ -90,12 +85,21 @@ class Slots(Widget):
       self.strips = []
       with self.canvas:
         for n in range(3):
-          strip = Strip("stripbig1")
+          strip = Strip(Image(os.path.join("themes", config.theme, "images", "stripbig1.png")))
           strip.set_uv(self, strip.slot_to_uv(0))
           self.strips.append(strip)
         Color(1,0,0)
         self.payline = Rectangle()
       self.last_time = time.time()
+
+      self.sounds = {}
+      files = glob.glob(os.path.join("themes", config.theme, 'audio', "*" + config.audio_extension))
+      files += glob.glob(os.path.join("themes", config.theme, 'audio', "*/*" + config.audio_extension))
+      for fn in files:
+        path, f = os.path.split(fn)
+        f, ext = os.path.splitext(f)
+        snd = SoundLoader.load(fn)
+        self.sounds[f] = snd
 
     def on_size(self, *args):
       cx = self.size[0]/2
@@ -116,7 +120,7 @@ class Slots(Widget):
         if self.state=='idle':
             self.state ='STATE_SPINNING'
             self.stopped = 0
-            snd_bump.play()
+            self.sounds['roll'].play()
             self.start_time=time.time()
             self.last_time = time.time()
             self.jackpot=0
@@ -146,7 +150,7 @@ class Slots(Widget):
           slotnum = self.strips[self.stopped].strip_pos()
           self.strips[self.stopped].set_uv(self, self.strips[self.stopped].slot_to_uv(slotnum))
           # play sound for slot
-          reel_sound[slotnum].play()
+          self.sounds['reel-icon-%d' % slotnum].play()
           if slotnum==5:
              logging.warn('winner on {}'.format(self.stopped+1))
              self.jackpot=self.jackpot+1
@@ -156,7 +160,7 @@ class Slots(Widget):
 
       elif self.state =='FINAL':
         logging.warn('total jackpot: {}'.format(self.jackpot))
-        if (self.jackpot>0): snd_win.play()
+        if (self.jackpot>0): self.sounds['win'].play()
         coinDispense.dispenseCoin(self.jackpot+1)
         self.state='idle'
 
@@ -226,9 +230,9 @@ def main(argv, stdout, environ):
                     datefmt="%m/%d %H:%M:%S", level=args.log_level)
 
   #Config.set('graphics', 'show_cursor', '0')
-  if Hardware.config.window_size:
+  if config.window_size:
     Config.set('graphics', 'fullscreen', '1')
-    #Window.size = Hardware.config.window_size
+    #Window.size = config.window_size
 
   Window.clearcolor = get_color_from_hex('00bfff')
   
