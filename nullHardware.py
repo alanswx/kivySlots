@@ -1,6 +1,9 @@
 import time
 import logging
 
+def setup():
+  pass
+
 class coinDispense:
      def __init__(self):
         # Set frequency to 60hz, good for servos.

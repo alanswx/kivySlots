@@ -8,9 +8,13 @@ os.environ['KIVY_AUDIO'] = 'sdl2'
 import RPi.GPIO as GPIO
 import time
 import config
+import subprocess
 
 # Import the PCA9685 module.
 import Adafruit_PCA9685
+
+def setup():
+  subprocess.call(['amixer', 'cset', "numid=1,iface=MIXER,name='PCM Playback Volume'", '100'])
 
 class coinDispense:
      def __init__(self):

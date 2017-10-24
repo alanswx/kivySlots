@@ -2,7 +2,7 @@
 from __future__ import division
 
 import random
-import os, sys, time, math, logging, argparse, glob
+import os, sys, time, math, logging, argparse, glob, subprocess
 
 import config
 
@@ -27,6 +27,8 @@ from kivy.graphics import *
 from kivy.utils import get_color_from_hex
 from kivy.config import Config
 
+
+# 
 
 # should this be global?
 coinDispense = Hardware.coinDispense()
@@ -150,7 +152,7 @@ class Slots(Widget):
           slotnum = self.strips[self.stopped].strip_pos()
           self.strips[self.stopped].set_uv(self, self.strips[self.stopped].slot_to_uv(slotnum))
           # play sound for slot
-          self.sounds['reel-icon-%d' % slotnum].play()
+          self.sounds['reel-icon-%d' % (slotnum+1)].play()
           if slotnum==5:
              logging.warn('winner on {}'.format(self.stopped+1))
              self.jackpot=self.jackpot+1
@@ -236,6 +238,8 @@ def main(argv, stdout, environ):
 
   Window.clearcolor = get_color_from_hex('00bfff')
   
+  Hardware.setup()
+
   Slot().run()
   
 
