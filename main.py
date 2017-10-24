@@ -1,5 +1,8 @@
+#!/usr/bin/env python3
 from __future__ import division
+
 import random
+import os, sys, time, math
 
 try:
   import piHardware as Hardware
@@ -61,14 +64,14 @@ class Strip(Rectangle):
     u = 0
     v = val
     w = 1
-    h = -.7
+    h = -.85
     self.tex_coords = [u, v, u+w, v, u+w, v+h, u, v+h]
 
   def strip_pos(self):
-    return int((1.10-self.tex_coords[1]) / .165) % 6
+    return int((1.18-self.tex_coords[1]) / .165) % 6
 
   def slot_to_uv(self, slot):
-    return 1.10 - (slot * .165)
+    return 1.18 - (slot * .165)
 
   def get_uv(self):
     return (self.tex_coords[0], self.tex_coords[1])
@@ -76,7 +79,6 @@ class Strip(Rectangle):
 ##  [1.100, .942, .759, .598, .444, .273]
 
 class Slots(Widget):
-    sw_seconds=0
     state = 'idle'
     first_stop_length=2.0
     jackpot=0
@@ -84,20 +86,23 @@ class Slots(Widget):
     def __init__(self, **kwargs):
       super(Slots, self).__init__(**kwargs)
 
+      self.start_time=time.time()
+
       self.strips = []
       with self.canvas:
         for n in range(3):
-          strip = Strip("stripbig%d" % (n+1))
+          strip = Strip("stripbig1")
           strip.set_uv(self, strip.slot_to_uv(0))
           self.strips.append(strip)
         Color(1,0,0)
         self.payline = Rectangle()
+      self.last_time = time.time()
 
     def on_size(self, *args):
       cx = self.size[0]/2
       ns = len(self.strips)
       sw = self.size[0] / (ns*2)
-      mw = 10
+      mw = 20
 
       sx = cx - (ns*sw+(ns-1)*mw)/2
 
@@ -113,28 +118,32 @@ class Slots(Widget):
             self.state ='STATE_SPINNING'
             self.stopped = 0
             snd_bump.play()
-            self.sw_seconds=0
+            self.start_time=time.time()
+            self.last_time = time.time()
             self.jackpot=0
         if self.state=='key':
             self.state ='STATE_SPINNING'
           
- 
-    def update(self, nap):
+    def update(self):
+      dt = time.time() - self.start_time
+      dtt = time.time() - self.last_time
+      self.last_time = time.time()
+
       if self.state =='idle':
         self.state='idle'
       elif self.state =='STATE_SPINNING':
-        self.sw_seconds += nap
-
         for n in range(self.stopped, len(self.strips)):
           v = .8 + (n*.1)
-          self.strips[n].add_uv(self, v * nap)
+          #self.strips[n].add_uv(self, v * min(.2, 100-dt/100))
+          self.strips[n].add_uv(self, v * dtt)
 
         #print("{} {}".format(self.strips[0].strip_pos(), self.strips[0].get_uv()[1]))
 
         #self.state = "key"
 
         # check time then switch to next state
-        if self.sw_seconds > self.first_stop_length+self.stopped +random.uniform(0,0.8):  # snap to next "unit"
+
+        if dt > self.first_stop_length+self.stopped +random.uniform(0,0.8):  # snap to next "unit"
           slotnum = self.strips[self.stopped].strip_pos()
           self.strips[self.stopped].set_uv(self, self.strips[self.stopped].slot_to_uv(slotnum))
           # play sound for slot
@@ -170,7 +179,7 @@ class Slot(App):
         if self.hardwareButton.checkButton():
             self.user_action()
 
-        self.slots.update(nap)
+        self.slots.update()
         if not self.playing:
             return  # don't move bird or pipes
 
