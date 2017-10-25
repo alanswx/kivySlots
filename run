@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cd /home/pi/kivySlots
+python main.py 1>&2 2>>error_log &
+
