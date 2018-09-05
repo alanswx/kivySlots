@@ -5,6 +5,7 @@ import random
 import os, sys, time, math, logging, argparse, glob, subprocess
 
 import config
+from functools import partial
 
 try:
   import piHardware as Hardware
@@ -13,8 +14,10 @@ except ImportError:
 
 
 from kivy.app import App
+from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.clock import Clock
 from kivy.core.audio import SoundLoader
+from kivy.lang import Builder
 from kivy.core.image import Image
 from kivy.core.window import Window, Keyboard
 from kivy.properties import (AliasProperty,
@@ -22,11 +25,43 @@ from kivy.properties import (AliasProperty,
                              NumericProperty,
                              ObjectProperty)
 from kivy.uix.image import Image as ImageWidget
+from kivy.uix.button import Button
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
 from kivy.graphics import *
 from kivy.utils import get_color_from_hex
 from kivy.config import Config
 
+import viewport
+
+Builder.load_string('''
+<StartScreen>:
+    buttons: _buttons
+    name: "Start Screen"
+    canvas:
+        Color:
+            hsv: .5, .5, .3
+        Rectangle:
+            size: self.size
+    Label:
+        text: "Slots"
+        font_size: '128sp'
+        pos_hint: {'center_x': .5, 'center_y': .7}
+
+    GridLayout:
+        id: _buttons
+        size_hint: .10, .40
+        pos_hint: {'center_x': .5, 'center_y': .3}
+        cols: 1
+
+<GameScreen>:
+    slots: _id_slots
+    name: "Game Screen"
+    FloatLayout:
+        Slots:
+            id: _id_slots
+            canvas:
+''')
 
 # 
 
@@ -82,21 +117,36 @@ class Slots(Widget):
     def __init__(self, **kwargs):
       super(Slots, self).__init__(**kwargs)
 
-      self.start_time=time.time()
-
       self.strips = []
+
+    def setup(self, theme):
+      for strip in self.strips:
+        del strip
+      self.canvas.clear()
+
+      self.start_time=time.time()
+      self.strips = []
+
       with self.canvas:
+        bg = Rectangle()
+        bg.source = os.path.join("themes", theme, "images", "background.png")
+        bg.pos = (0,0)
+        bg.size = (1920,1080)
+
         for n in range(3):
-          strip = Strip(Image(os.path.join("themes", config.theme, "images", "stripbig1.png")))
+          strip = Strip(Image(os.path.join("themes", theme, "images", "stripbig1.png")))
           strip.set_uv(self, strip.slot_to_uv(0))
           self.strips.append(strip)
+
         Color(1,0,0)
         self.payline = Rectangle()
+
       self.last_time = time.time()
 
+      ## load audio
       self.sounds = {}
-      files = glob.glob(os.path.join("themes", config.theme, 'audio', "*" + config.audio_extension))
-      files += glob.glob(os.path.join("themes", config.theme, 'audio', "*/*" + config.audio_extension))
+      files = glob.glob(os.path.join("themes", theme, 'audio', "*" + config.audio_extension))
+      files += glob.glob(os.path.join("themes", theme, 'audio', "*/*" + config.audio_extension))
       for fn in files:
         path, f = os.path.split(fn)
         f, ext = os.path.splitext(f)
@@ -104,6 +154,8 @@ class Slots(Widget):
         self.sounds[f] = snd
 
     def on_size(self, *args):
+      if len(self.strips) == 0: return
+
       cx = self.size[0]/2
       ns = len(self.strips)
       sw = self.size[0] / (ns*2)
@@ -139,12 +191,7 @@ class Slots(Widget):
       elif self.state =='STATE_SPINNING':
         for n in range(self.stopped, len(self.strips)):
           v = .8 + (n*.1)
-          #self.strips[n].add_uv(self, v * min(.2, 100-dt/100))
           self.strips[n].add_uv(self, v * dtt)
-
-        #print("{} {}".format(self.strips[0].strip_pos(), self.strips[0].get_uv()[1]))
-
-        #self.state = "key"
 
         # check time then switch to next state
 
@@ -166,19 +213,120 @@ class Slots(Widget):
         coinDispense.dispenseCoin(self.jackpot+1)
         self.state='idle'
 
+class GameScreen(Screen):
+  playing = False
+
+  def start_game(self, theme):
+
+    self.slots.setup(theme)
+    self.slots.on_size()
+    self.timer = Clock.schedule_interval(self.update_timer, 0.004)    
+
+  def on_keyboard_down(self, keyboard, keycode, text, modifiers):
+    if keycode[1] == "spacebar": 
+      self.slots.start_spin()
+    if keycode[1] == "q":
+      self.manager.current = "Start Screen"
+
+  def update_timer(self, i=None, val=None):
+    if self.manager.hardwareButton.checkButton():
+        self.slots.start_spin()
+
+    self.slots.update()
+    if not self.playing:
+        return  # don't move bird or pipes
+
+    if self.manager.test_game_over():
+        snd_game_over.play()
+        self.playing = False
+
+class StartScreen(Screen):
+  def __init__(self, **kwargs):
+    super(Screen, self).__init__(**kwargs)
+
+
+  def build(self):
+    #manager = kwargs['manager']
+    themepaths = glob.glob("themes/*")
+
+    themes = []
+    for themepath in themepaths:
+      path, theme = os.path.split(themepath)
+      themes.append(theme)
+
+    gl = self.buttons
+    gl.size_hint = (.2, .1*len(themes))
+    #themes.remove("casablanca")
+
+    for theme in themes:
+      bl = BoxLayout(size_hint=(.3, .3))
+      gl.add_widget(bl)
+      b = Button(text=theme, font_size='64sp', size_hint=(.9, .9), 
+                 on_press=partial(self.manager.start_game, theme))
+      bl.add_widget(b)
+
+  def on_gamepad_down(self, obj, gamepad, buttonid):
+    if buttonid == 8:
+      self.manager.start_game("casablanca")
+    if buttonid == 9:
+      self.manager.start_game("halloween")
+      
+  def on_keyboard_down(self, keyboard, keycode, text, modifiers):
+
+    if keycode[1] == "1": 
+      self.manager.start_game("casablanca")
+    if keycode[1] == "2": 
+      self.manager.start_game("halloween")
+
+class SlotScreenManager(ScreenManager):
+  hardwareButton = Hardware.hardwareButton()
+
+  def start_game(self, theme, *args):
+    self.current = "Game Screen"
+
+    self.game_screen.start_game(theme)
+
 class Slot(App):
-    playing = False
-    hardwareButton = Hardware.hardwareButton()
+
+    def build(self):
+      self.root = viewport.Viewport(size=(1920,1080), do_scale=True)
+      self.manager = SlotScreenManager()
+      self.root.add_widget(self.manager)
+
+      self.manager.start_screen = StartScreen()
+      self.manager.add_widget(self.manager.start_screen)
+
+      self.manager.game_screen = GameScreen()
+      self.manager.add_widget(self.manager.game_screen)
+
+      self._keyboard = Window.request_keyboard(self._keyboard_closed, self, "text")
+      self._keyboard.bind(on_key_down=self.on_keyboard_down)
+
+      self.current = "Start Screen"
+
+      return self.root
+
+    def _keyboard_closed(self):
+      self._keyboard.unbind(on_key_down=self._on_keyboard_down)
+      self._keyboard = None
+
+    def on_gamepad_down(self, obj, gamepad, buttonid):
+      self.manager.current_screen.on_gamepad_down(obj, gamepad, buttonid)
+
+    def on_keyboard_down(self, keyboard, keycode, text, modifiers):
+      self.manager.current_screen.on_keyboard_down(keycode, keycode, text, modifiers)
 
     def on_start(self):
         self.spacing = 0.5 * self.root.width
+        self.manager.start_screen.build()
 
-        self.slots = self.root.ids.slots
-        #self.bird = self.root.ids.bird
-        Clock.schedule_interval(self.update, 0.004)
+        if 0:
+          self.slots = self.root.ids.slots
+          #self.bird = self.root.ids.bird
+          Clock.schedule_interval(self.update, 0.004)
 
-        Window.bind(on_key_down=self.on_key_down)
-        self.slots.on_touch_down = self.user_action
+          Window.bind(on_key_down=self.on_key_down)
+          self.slots.on_touch_down = self.user_action
 
     def update(self, nap):
         if self.hardwareButton.checkButton():
@@ -192,9 +340,6 @@ class Slot(App):
             snd_game_over.play()
             self.playing = False
 
-    def on_key_down(self, window, key, *args):
-        if key == Keyboard.keycodes['spacebar']:
-            self.user_action()
 
     def user_action(self, *args):
         self.slots.start_spin()
@@ -236,7 +381,7 @@ def main(argv, stdout, environ):
     Config.set('graphics', 'fullscreen', '1')
     #Window.size = config.window_size
 
-  Window.clearcolor = get_color_from_hex('00bfff')
+  Window.clearcolor = get_color_from_hex(config.background)
   
   Hardware.setup()
 

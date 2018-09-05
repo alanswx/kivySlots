@@ -1,0 +1,3 @@
+export path="themes/halloween/images"
+export path2="themes/halloween/images/128"
+./makeStrip.py --dest $path/stripbig1.png $path2/Bat.png $path2/Cat.png $path2/Ghost.png $path2/Mummy.png $path2/Sickle.png $path2/Pumpkin.png 

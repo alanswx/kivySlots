@@ -3,7 +3,6 @@ import logging
 #
 # without this - sound was really delayed, not sure why
 #
-os.environ['KIVY_AUDIO'] = 'sdl2'
 
 import RPi.GPIO as GPIO
 import time
@@ -14,6 +13,7 @@ import subprocess
 import Adafruit_PCA9685
 
 def setup():
+  os.environ['KIVY_AUDIO'] = 'sdl2'
   subprocess.call(['amixer', 'cset', "numid=1,iface=MIXER,name='PCM Playback Volume'", '100'])
 
 class coinDispense:
