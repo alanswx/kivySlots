@@ -253,6 +253,7 @@ class StartScreen(Screen):
 
     self.themes = []
     for themepath in themepaths:
+      if not os.path.isdir(themepath): continue
       path, theme = os.path.split(themepath)
       self.themes.append(theme)
 
