@@ -4,6 +4,8 @@ from __future__ import division
 import random
 import os, sys, time, math, logging, argparse, glob, subprocess
 
+import string
+
 import config
 from functools import partial
 
@@ -249,16 +251,15 @@ class StartScreen(Screen):
     #manager = kwargs['manager']
     themepaths = glob.glob("themes/*")
 
-    themes = []
+    self.themes = []
     for themepath in themepaths:
       path, theme = os.path.split(themepath)
-      themes.append(theme)
+      self.themes.append(theme)
 
     gl = self.buttons
-    gl.size_hint = (.2, .1*len(themes))
-    #themes.remove("casablanca")
+    gl.size_hint = (.2, .1*len(self.themes))
 
-    for theme in themes:
+    for theme in self.themes:
       bl = BoxLayout(size_hint=(.3, .3))
       gl.add_widget(bl)
       b = Button(text=theme, font_size='64sp', size_hint=(.9, .9), 
@@ -266,17 +267,19 @@ class StartScreen(Screen):
       bl.add_widget(b)
 
   def on_gamepad_down(self, obj, gamepad, buttonid):
-    if buttonid == 8:
-      self.manager.start_game("casablanca")
-    if buttonid == 9:
-      self.manager.start_game("halloween")
+    i = buttonid
+    if i < len(self.themes):
+      theme = self.themes[i]
+      self.manager.start_game(theme)
       
   def on_keyboard_down(self, keyboard, keycode, text, modifiers):
-
-    if keycode[1] == "1": 
-      self.manager.start_game("casablanca")
-    if keycode[1] == "2": 
-      self.manager.start_game("halloween")
+    if keycode[1] in string.digits:
+      i = int(keycode[1])
+      if i==0: i=10
+      i = i - 1
+      if i < len(self.themes):
+        theme = self.themes[i]
+        self.manager.start_game(theme)
 
 class SlotScreenManager(ScreenManager):
   hardwareButton = Hardware.hardwareButton()
