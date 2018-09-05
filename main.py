@@ -299,7 +299,7 @@ class Slot(App):
       self.manager.game_screen = GameScreen()
       self.manager.add_widget(self.manager.game_screen)
 
-      self._keyboard = Window.request_keyboard(self._keyboard_closed, self, "text")
+      self._keyboard = Window.request_keyboard(self._keyboard_closed, self.manager, "text")
       self._keyboard.bind(on_key_down=self.on_keyboard_down)
 
       self.current = "Start Screen"
