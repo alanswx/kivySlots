@@ -1,0 +1,3 @@
+export path="themes/christmas/images"
+export path2="themes/christmas/images/flat"
+./makeStrip.py --dest  $path/stripbig1.png $path2/02.png  $path2/03.png $path2/04.png $path2/06.png  $path2/07.png $path2/35.png 
