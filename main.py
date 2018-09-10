@@ -306,6 +306,8 @@ class Slot(App):
       self._keyboard = Window.request_keyboard(self._keyboard_closed, self.manager, "text")
       self._keyboard.bind(on_key_down=self.on_keyboard_down)
 
+      self._gamepad = Window.bind(on_joy_button_down=self.on_gamepad_down)
+
       self.current = "Start Screen"
 
       return self.root
@@ -385,7 +387,7 @@ def main(argv, stdout, environ):
     Config.set('graphics', 'fullscreen', '1')
     #Window.size = config.window_size
 
-  Window.clearcolor = get_color_from_hex(config.background)
+  Window.clearcolor = get_color_from_hex("000000")
   
   Hardware.setup()
 
