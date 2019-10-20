@@ -325,6 +325,12 @@ class Slot(App):
     def on_start(self):
         self.spacing = 0.5 * self.root.width
         self.manager.start_screen.build()
+        # if we have config.theme set, let's jump right to that theme
+        try:
+           if (config.theme):
+              self.manager.start_game(config.theme)
+        except : 
+            logging.warn('no theme set')
 
         if 0:
           self.slots = self.root.ids.slots
