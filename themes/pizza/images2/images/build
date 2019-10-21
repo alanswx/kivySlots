@@ -1,2 +1,0 @@
-export path="themes/casablanca/images"
-./makeStrip.py --dest  $path/stripbig1.png $path/bell.png  $path/orange.png $path/peach.png $path/olive.png  $path/lemon.png $path/cherry.png 
