@@ -1,0 +1,8 @@
+export path="themes/pizza/images"
+./makeStrip.py --dest  $path/stripbig1.png \
+$path/icon_0000_Layer-9.png \
+$path/icon_0003_Layer-6.png \
+$path/icon_0001_Layer-8.png \
+$path/icon_0004_Layer-4.png \
+$path/icon_0002_Layer-7.png \
+$path/icon_0005_Layer-2.png 
